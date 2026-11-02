@@ -5,6 +5,7 @@ compose stack:
 
 | Domain | Upstream on the `edge` network | App |
 | --- | --- | --- |
+| metabeer.co.uk (and www) | `metabeer-web:8000` | [Metabeer/metabeer-v2](https://github.com/Metabeer/metabeer-v2) (`compose/edge.yaml`) |
 | triptych.purplehatstands.com | `triptych-proxy:8000` | [hatstand/triptych](https://github.com/hatstand/triptych) (`compose/edge.yaml`) |
 
 Adding a site takes one block in [`caddy/Caddyfile`](caddy/Caddyfile), plus a row here. The app
@@ -34,7 +35,7 @@ Rolling back is a revert PR, or `tailscale ssh edge-deploy@marvin <older sha>` f
 
 Add `edge-deploy` to the `tag:ci` → `tag:marvin` SSH rule and its `sshTests` (see triptych's
 `deploy/README.md`). Then Trust credentials → **Credential** → **OpenID Connect** → issuer
-**GitHub**, with subject `repo:hatstand@314491/marvin-edge@<repo id>:environment:marvin` (Tailscale
+**GitHub**, with subject `repo:hatstand@314491/marvin-edge@1442986314:environment:marvin` (Tailscale
 shows the subject it received if this doesn't match), scope **Auth Keys (write)** and tag `tag:ci`.
 
 ### GitHub

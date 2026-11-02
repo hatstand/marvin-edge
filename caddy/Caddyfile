@@ -20,3 +20,16 @@ triptych.purplehatstands.com {
 		lb_try_duration 30s
 	}
 }
+
+# Metabeer/metabeer-v2, compose/edge.yaml. Two web containers share the alias during a
+# docker-rollout; lb_try_duration holds a request while neither answers.
+metabeer.co.uk {
+	encode zstd gzip
+	reverse_proxy metabeer-web:8000 {
+		lb_try_duration 30s
+	}
+}
+
+www.metabeer.co.uk {
+	redir https://metabeer.co.uk{uri} permanent
+}

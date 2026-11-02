@@ -1,0 +1,22 @@
+# One block per public site on marvin. Each app's stack puts one service on the `edge`
+# network under an alias; Caddy reaches it there. On these sites Caddy trusts no forwarded
+# headers and sets X-Forwarded-For to the visitor's address, which the apps' rate limits use.
+{
+	# The proxy warns "aborting with incomplete response ... context canceled" whenever a
+	# client drops a stream mid-response (every tab that leaves a page with a live-update
+	# stream), so log only its errors.
+	log default {
+		exclude http.handlers.reverse_proxy
+	}
+	log proxy {
+		include http.handlers.reverse_proxy
+		level ERROR
+	}
+}
+
+# hatstand/triptych, compose/edge.yaml. triptych's own proxy handles its rollouts.
+triptych.purplehatstands.com {
+	reverse_proxy triptych-proxy:8000 {
+		lb_try_duration 30s
+	}
+}

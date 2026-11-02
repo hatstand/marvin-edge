@@ -1,0 +1,22 @@
+name: check
+
+# The Caddyfile must load and be formatted, with the same image marvin runs, before it can
+# reach main (and so marvin).
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_call:
+
+jobs:
+  caddyfile:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: caddy validate and fmt
+        run: |
+          image=$(grep -m1 -oE 'docker.io/library/caddy:[^ ]+' compose.yaml)
+          run() { docker run --rm -v "$PWD/caddy:/etc/caddy:ro" "$image" "$@"; }
+          run caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+          run caddy fmt --diff /etc/caddy/Caddyfile

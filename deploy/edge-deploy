@@ -1,0 +1,50 @@
+#!/bin/bash
+# Login shell for the `edge-deploy` user on marvin (see README.md). Tailscale SSH runs
+# `<shell> -c "<command>"`; the only command accepted is the 40-hex SHA of a commit on main.
+# The checkout lives in /srv/edge next to its untracked .env (PUBLIC_BIND).
+set -euo pipefail
+
+sha=${!#}
+if [[ ! $sha =~ ^[0-9a-f]{40}$ ]]; then
+  echo "usage: tailscale ssh edge-deploy@marvin <commit sha on main>" >&2
+  exit 2
+fi
+
+cd /srv/edge
+git fetch --quiet origin main
+if ! git merge-base --is-ancestor "$sha" origin/main; then
+  echo "$sha is not on main" >&2
+  exit 1
+fi
+old=$(git rev-parse HEAD)
+git checkout --quiet --detach "$sha"
+
+# Check the new config with the image it will run on before the live Caddy sees it. On
+# failure, go back to the old checkout so the running Caddy's directory matches what it runs.
+if ! docker compose run --rm --no-deps -T caddy \
+    caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile; then
+  git checkout --quiet --detach "$old"
+  echo "Caddyfile at $sha does not validate; nothing changed" >&2
+  exit 1
+fi
+
+if [[ -n $(docker compose ps --quiet caddy) ]] && git diff --quiet "$old" "$sha" -- compose.yaml; then
+  # Only the Caddyfile changed: a graceful reload, no dropped connections. If the new config
+  # fails to load, Caddy keeps running the old one and this fails the deploy.
+  docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+else
+  # compose.yaml changed (or Caddy isn't running): recreate it, a second or so without 80/443.
+  docker compose pull --quiet
+  docker compose up --detach --remove-orphans
+fi
+
+# Each site should answer over TLS on the LAN address. Warn only: a new site's DNS or
+# certificate can lag its first deploy.
+. ./.env
+for host in $(grep -oE '^[a-z0-9.-]+\.[a-z]+ \{' caddy/Caddyfile | cut -d' ' -f1); do
+  code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 \
+    --resolve "$host:443:$PUBLIC_BIND" "https://$host/" || true)
+  echo "$host: HTTP $code"
+done
+echo "$sha" > DEPLOYED
+docker compose ps

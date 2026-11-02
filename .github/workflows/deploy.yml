@@ -1,0 +1,36 @@
+name: deploy
+
+# On every push to main: check the Caddyfile, then join the tailnet as an ephemeral tag:ci node
+# (workload identity federation, no stored secret) and tell marvin to apply this commit.
+# One-time setup is in README.md.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-marvin-edge
+  cancel-in-progress: false
+
+jobs:
+  check:
+    uses: ./.github/workflows/check.yml
+
+  deploy:
+    needs: check
+    runs-on: ubuntu-26.04
+    # The Tailscale trust credential accepts only this environment's subject, and the
+    # environment only accepts deployments from main.
+    environment: marvin
+    permissions:
+      id-token: write
+    steps:
+      - uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ vars.TS_OAUTH_CLIENT_ID }}
+          audience: ${{ vars.TS_AUDIENCE }}
+          tags: tag:ci
+          ping: marvin
+      # edge-deploy's login shell on marvin is deploy/edge-deploy, which accepts only a commit SHA.
+      - run: tailscale ssh edge-deploy@marvin "$GITHUB_SHA"

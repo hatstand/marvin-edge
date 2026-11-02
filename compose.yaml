@@ -1,0 +1,34 @@
+# marvin's front door: the only thing listening on marvin's LAN address, ports 80 and 443.
+# Caddy terminates TLS for every public site on marvin and passes each to its app's stack over
+# the `edge` network, which this stack creates and the apps join as external. See README.md.
+name: edge
+
+services:
+  caddy:
+    image: docker.io/library/caddy:2.11.7-alpine
+    restart: unless-stopped
+    ports:
+      # The LAN address, not 0.0.0.0: Docker's published ports skip the host firewall, and a
+      # wildcard 443 would also catch the tailnet's 443, which `tailscale serve` uses.
+      - "${PUBLIC_BIND:?set PUBLIC_BIND, marvin's LAN address, in .env}:80:80"
+      - "${PUBLIC_BIND}:443:443"
+    volumes:
+      # The directory, not the file: a deploy's `git checkout` replaces the Caddyfile, and a
+      # file mount would keep showing the old one.
+      - ./caddy:/etc/caddy:ro
+      # Certificates and the ACME account. Without it every restart orders new certificates.
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [edge]
+    logging:
+      driver: local
+
+networks:
+  edge:
+    name: edge
+
+volumes:
+  caddy-data:
+    name: edge-caddy-data
+  caddy-config:
+    name: edge-caddy-config

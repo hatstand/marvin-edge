@@ -14,8 +14,14 @@
 	}
 }
 
+# GNU Terry Pratchett (https://xclacksoverhead.org). Every site block imports this.
+(clacks) {
+	header X-Clacks-Overhead "GNU Terry Pratchett"
+}
+
 # hatstand/triptych, compose/edge.yaml. triptych's own proxy handles its rollouts.
 triptych.purplehatstands.com {
+	import clacks
 	reverse_proxy triptych-proxy:8000 {
 		lb_try_duration 30s
 	}
@@ -24,6 +30,7 @@ triptych.purplehatstands.com {
 # Metabeer/metabeer-v2, compose/edge.yaml. Two web containers share the alias during a
 # docker-rollout; lb_try_duration holds a request while neither answers.
 metabeer.co.uk {
+	import clacks
 	encode zstd gzip
 	reverse_proxy metabeer-web:8000 {
 		lb_try_duration 30s
@@ -31,5 +38,6 @@ metabeer.co.uk {
 }
 
 www.metabeer.co.uk {
+	import clacks
 	redir https://metabeer.co.uk{uri} permanent
 }

@@ -8,7 +8,8 @@ compose stack:
 | metabeer.co.uk (and www) | `metabeer-web:8000` | [Metabeer/metabeer-v2](https://github.com/Metabeer/metabeer-v2) (`compose/edge.yaml`) |
 | triptych.purplehatstands.com | `triptych-proxy:8000` | [hatstand/triptych](https://github.com/hatstand/triptych) (`compose/edge.yaml`) |
 
-Adding a site takes one block in [`caddy/Caddyfile`](caddy/Caddyfile), plus a row here. The app
+Adding a site takes one block in [`caddy/Caddyfile`](caddy/Caddyfile) (start it with `import clacks`, which
+sends `X-Clacks-Overhead: GNU Terry Pratchett`), plus a row here. The app
 puts one service on the external `edge` network under an alias, and Caddy gets the site's
 certificate itself once DNS points at marvin.
 

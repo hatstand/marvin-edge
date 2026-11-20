@@ -51,12 +51,20 @@ sudo install -m 0755 deploy/edge-deploy /usr/local/bin/edge-deploy
 echo /usr/local/bin/edge-deploy | sudo tee -a /etc/shells
 sudo useradd --system --create-home --shell /usr/local/bin/edge-deploy --groups docker edge-deploy
 sudo git clone https://github.com/hatstand/marvin-edge /srv/edge
-echo "PUBLIC_BIND=<marvin's LAN address>" | sudo tee /srv/edge/.env
+printf 'PUBLIC_BIND=%s\nPUBLIC_BIND6=%s\n' "<marvin's LAN address>" "<marvin's IPv6 address>" | sudo tee /srv/edge/.env
 sudo chown -R edge-deploy: /srv/edge
 ```
 
 Reinstall the shell whenever `deploy/edge-deploy` changes, because the login shell is a copy of
 the script, not the checkout.
+
+`PUBLIC_BIND6` arrives by DHCPv6, which can finish after Docker starts at boot, and a published
+port on a missing address stops the container from starting. Let marvin bind to it early:
+
+```bash
+echo net.ipv6.ip_nonlocal_bind=1 | sudo tee /etc/sysctl.d/60-edge-nonlocal-bind.conf
+sudo sysctl --system
+```
 
 The first start takes 80/443 over from triptych's `proxy`. triptych's `deploy/README.md`,
 section "Behind the shared edge", has the order to do that in.
